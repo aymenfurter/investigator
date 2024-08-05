@@ -1,0 +1,60 @@
+# Azure SDK
+azure-storage-blob
+azure-storage-queue
+azure-cosmos
+azure-identity
+azure-core
+azure-search-documents
+
+# Audio processing
+pydub
+librosa
+
+# Web framework
+Flask[async]
+Flask-CORS
+
+# Async support
+aiohttp
+asyncio
+
+# Environment variables
+python-dotenv
+
+# Data processing and analysis
+numpy
+pandas
+
+# OpenAI API
+openai
+
+# HTTP requests
+requests
+
+# JSON handling
+jsonschema
+
+# Date and time handling
+python-dateutil
+
+# Logging
+loguru
+
+# Testing
+pytest
+pytest-asyncio
+
+# Type checking
+mypy
+
+# Linting
+flake8
+
+# Formatting
+black
+
+# Documentation
+Sphinx
+
+# Development tools
+ipython

@@ -1,0 +1,52 @@
+# Ignore all .env files anywhere in the repository
+*.env
+
+# Node.js related ignores
+node_modules/
+dist/
+build/
+npm-debug.log*
+yarn-error.log
+.parcel-cache/
+.eslintcache
+.nyc_output
+.next/
+out/
+.vercel
+.DS_Store
+
+# Ignore any .env file in the repository
+*.env
+
+# Python related ignores
+__pycache__/
+*.py[cod]
+*.so
+.Python
+env/
+venv/
+.venv/
+.mypy_cache/
+.pytest_cache/
+.tox/
+.coverage
+.coverage.*
+*.cover
+*.py,cover
+.pyo
+.hypothesis/
+.ipynb_checkpoints
+.pylint.d
+.pyre/
+.pytype/
+.ruff_cache/
+.DS_Store
+
+# Global ignores
+*.log
+*.temp
+*.tmp
+*.bak
+*~
+*.swp
+*.swo
