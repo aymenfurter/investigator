@@ -77,10 +77,19 @@ async def upload_file(case_id):
 @api.route('/cases/<case_id>/files', methods=['GET'])
 def get_files(case_id):
     case = cosmos_db.get_case(case_id)
-    case = cosmos_db.update_case(case_id, {'files': list(set(case.get('files', [])) )})
-    if case:
-        return jsonify(case.get('files', [])), 200
-    return jsonify({"error": "Case not found"}), 404
+    if not case:
+        return jsonify({"error": "Case not found"}), 404
+    
+    files_info = []
+    for filename in case.get('files', []):
+        file_info = {
+            'filename': filename,
+            'summary': cosmos_db.get_summary(case_id, filename),
+            'full_transcript': cosmos_db.get_full_transcript(case_id, filename)
+        }
+        files_info.append(file_info)
+    
+    return jsonify(files_info), 200
 
 @api.route('/cases/<case_id>/files', methods=['DELETE'])
 async def delete_all_files(case_id):
@@ -137,27 +146,19 @@ def get_dashboard():
 @api.route('/cases/<case_id>/audio/<filename>', methods=['GET'])
 def get_audio_file(case_id, filename):
     try:
-        # Initialize the BlobServiceClient
         blob_service_client = BlobServiceClient(
             account_url=f"https://{audio_processor.storage_account_name}.blob.core.windows.net",
             credential=audio_processor.storage_account_key
         )
 
-        # Get a reference to the container
         container_client = blob_service_client.get_container_client(case_id)
-
-        # Get a reference to the blob
         blob_client = container_client.get_blob_client(filename)
-
-        # Download the blob
         download_stream = blob_client.download_blob()
 
-        # Create a BytesIO object from the downloaded stream
         audio_data = io.BytesIO()
         download_stream.readinto(audio_data)
         audio_data.seek(0)
 
-        # Return the file as a streaming response
         return Response(
             audio_data,
             mimetype="audio/mpeg",
@@ -165,3 +166,17 @@ def get_audio_file(case_id, filename):
         )
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@api.route('/cases/<case_id>/files/<filename>/summary', methods=['GET'])
+def get_file_summary(case_id, filename):
+    summary = cosmos_db.get_summary(case_id, filename)
+    if summary:
+        return jsonify({"summary": summary}), 200
+    return jsonify({"error": "Summary not found"}), 404
+
+@api.route('/cases/<case_id>/files/<filename>/transcript', methods=['GET'])
+def get_file_transcript(case_id, filename):
+    transcript = cosmos_db.get_full_transcript(case_id, filename)
+    if transcript:
+        return jsonify({"transcript": transcript}), 200
+    return jsonify({"error": "Transcript not found"}), 404

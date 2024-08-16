@@ -31,9 +31,13 @@ const Transcription = ({ transcript, currentTime, onTimeClick }) => {
 
   useEffect(() => {
     if (transcript) {
-      const newActiveIndex = transcript.findIndex(
-        (line) => currentTime >= line.start && currentTime < line.end
-      );
+      const lines = transcript.split('\n');
+      const newActiveIndex = lines.findIndex((line, index) => {
+        const nextLine = lines[index + 1];
+        const currentTimecode = parseTimecode(line);
+        const nextTimecode = nextLine ? parseTimecode(nextLine) : Infinity;
+        return currentTime >= currentTimecode && currentTime < nextTimecode;
+      });
       if (newActiveIndex !== -1 && newActiveIndex !== activeIndex) {
         setActiveIndex(newActiveIndex);
         if (transcriptRef.current) {
@@ -44,19 +48,36 @@ const Transcription = ({ transcript, currentTime, onTimeClick }) => {
     }
   }, [currentTime, transcript, activeIndex]);
 
+  const parseTimecode = (line) => {
+    const match = line.match(/(\d{2}):(\d{2}):(\d{2}),(\d{3})/);
+    if (match) {
+      const [, hours, minutes, seconds, milliseconds] = match;
+      return parseInt(hours) * 3600 + parseInt(minutes) * 60 + parseInt(seconds) + parseInt(milliseconds) / 1000;
+    }
+    return 0;
+  };
+
+  const handleLineClick = (line) => {
+    const timecode = parseTimecode(line);
+    onTimeClick(timecode);
+  };
+
   if (!transcript || transcript.length === 0) {
     return <TranscriptionContainer>No transcript available</TranscriptionContainer>;
   }
 
+  const lines = transcript.split('\n');
+
   return (
     <TranscriptionContainer ref={transcriptRef}>
-      {transcript.map((line, index) => (
+      
+      {lines.map((line, index) => (
         <TranscriptText 
           key={index} 
           active={index === activeIndex}
-          onClick={() => onTimeClick(line.start)}
+          onClick={() => handleLineClick(line)}
         >
-          {line.text}
+          {line}
         </TranscriptText>
       ))}
     </TranscriptionContainer>

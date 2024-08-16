@@ -173,6 +173,10 @@ const ChatSection = ({ caseId, onCitationClick }) => {
       
       if (response.data && response.data.choices && response.data.choices[0].message) {
         const assistantMessage = response.data.choices[0].message;
+        if (assistantMessage.context && assistantMessage.context.citations) {
+          assistantMessage.context.citations = assistantMessage.context.citations.filter(citation => !citation.url.includes('full_transcript') && !citation.url.includes('summary'));
+        }
+
         setMessages(prevMessages => [
           ...prevMessages,
           {

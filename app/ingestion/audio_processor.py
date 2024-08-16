@@ -6,6 +6,7 @@ from azure.core.exceptions import ResourceExistsError
 from azure.storage.queue import QueueClient
 from ingestion.transcription import TranscriptionService
 from ingestion.graph_generator import GraphGenerator
+from ingestion.summary_generator import SummaryGenerator
 from integration.cosmos_db import CosmosDB
 from dotenv import load_dotenv
 import json
@@ -17,6 +18,7 @@ load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 class IngestionJobApi:
     def __init__(self):
@@ -70,6 +72,7 @@ class AudioFileProcessor:
         self.transcription_service = TranscriptionService()
         self.graph_generator = GraphGenerator()
         self.ingestion_job_api = IngestionJobApi()
+        self.summary_generator = SummaryGenerator()
         self.cosmos_db = CosmosDB()
 
         self.is_processing = False
@@ -121,12 +124,15 @@ class AudioFileProcessor:
             os.unlink(temp_file.name)
             logger.info("Temporary file removed")
 
-            # Add filename to each chunk
             for chunk in transcription:
                 chunk['filename'] = filename
 
+            summary = await self.summary_generator.generate_summary(transcription)
+            full_transcript = self.transcription_service.get_full_transcript(transcription)
+
             await self.store_transcription_by_minute(case_id, filename, transcription)
-            logger.info("Transcription stored by minute")
+            await self.store_summary_and_transcript(case_id, filename, summary, full_transcript)
+            logger.info("Transcription, summary, and full transcript stored")
 
             ingestion_container = f"{case_id}-ingestion"
             self.ensure_container_exists(ingestion_container)
@@ -135,8 +141,7 @@ class AudioFileProcessor:
             if job_result["status"] == "error":
                 raise Exception(f"Failed to create ingestion job: {job_result['message']}")
 
-            logger.info("Ingestion job created")
-
+            logger.info("Ingestion job created") 
             await self.update_knowledge_graph(case_id, transcription)
             logger.info("Knowledge graph updated")
 
@@ -144,6 +149,7 @@ class AudioFileProcessor:
 
             logger.info(f"Successfully processed audio file: {filename} for case: {case_id}")
             logger.info(f"Ingestion job created: {job_result}")
+
         except Exception as e:
             logger.error(f"Error processing audio file {filename} for case {case_id}: {str(e)}")
             self.cosmos_db.update_case_status(case_id, "error")
@@ -176,6 +182,20 @@ class AudioFileProcessor:
                     else:
                         i += 1
         logger.info(f"Transcription stored by time segments for case {case_id}")
+
+    async def store_summary_and_transcript(self, case_id: str, filename: str, summary: str, full_transcript: str):
+        ingestion_container = f"{case_id}-ingestion"
+        container_client = self.ensure_container_exists(ingestion_container)
+
+        summary_blob_name = f"{filename}_summary.txt"
+        summary_blob_client = container_client.get_blob_client(summary_blob_name)
+        summary_blob_client.upload_blob(summary, overwrite=True)
+
+        transcript_blob_name = f"{filename}_full_transcript.txt"
+        transcript_blob_client = container_client.get_blob_client(transcript_blob_name)
+        transcript_blob_client.upload_blob(full_transcript, overwrite=True)
+
+        self.cosmos_db.add_summary_and_transcript(case_id, filename, summary, full_transcript)
 
     async def update_knowledge_graph(self, case_id: str, transcription: List[Dict[str, Any]]):
         try:

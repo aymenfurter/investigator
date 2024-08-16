@@ -18,13 +18,14 @@ class CosmosDB:
         self.container = self.database.get_container_client(self.container_name)
 
     def create_case(self, case_id: str, description: str) -> Dict[str, Any]:
-        """Create a new case in Cosmos DB."""
         case_item = {
             "id": case_id,
             "description": description,
             "files": [],
             "graph": {"nodes": [], "relationships": []},
-            "status": "created"
+            "status": "created",
+            "summaries": {},
+            "full_transcripts": {}
         }
         try:
             created_item = self.container.create_item(body=case_item)
@@ -36,9 +37,11 @@ class CosmosDB:
                 raise
 
     def get_case(self, case_id: str) -> Optional[Dict[str, Any]]:
-        """Retrieve a case from Cosmos DB by its ID."""
         try:
-            return self.container.read_item(item=case_id, partition_key=case_id)
+            case = self.container.read_item(item=case_id, partition_key=case_id)
+            case.setdefault('summaries', {})
+            case.setdefault('full_transcripts', {})
+            return case
         except CosmosHttpResponseError as e:
             if e.status_code == 404:
                 return None
@@ -46,7 +49,6 @@ class CosmosDB:
                 raise
 
     def update_case(self, case_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
-        """Update an existing case in Cosmos DB."""
         try:
             case = self.get_case(case_id)
             if not case:
@@ -59,11 +61,9 @@ class CosmosDB:
             raise ValueError(f"Error updating case: {str(e)}")
 
     def update_case_status(self, case_id: str, status: str) -> Dict[str, Any]:
-        """Update the status of an existing case in Cosmos DB."""
         return self.update_case(case_id, {"status": status})
 
     def delete_case(self, case_id: str) -> None:
-        """Delete a case from Cosmos DB."""
         try:
             self.container.delete_item(item=case_id, partition_key=case_id)
         except CosmosHttpResponseError as e:
@@ -71,7 +71,6 @@ class CosmosDB:
                 raise
 
     def list_cases(self) -> List[Dict[str, Any]]:
-        """List all cases in Cosmos DB."""
         query = "SELECT c.id, c.description, c.status FROM c"
         items = list(self.container.query_items(
             query=query,
@@ -80,7 +79,6 @@ class CosmosDB:
         return items
 
     def add_file_to_case(self, case_id: str, file_info: Dict[str, Any]) -> Dict[str, Any]:
-        """Add a file to an existing case."""
         try:
             case = self.get_case(case_id)
             if not case:
@@ -93,7 +91,6 @@ class CosmosDB:
             raise ValueError(f"Error adding file to case: {str(e)}")
 
     def remove_file_from_case(self, case_id: str, file_name: str) -> Dict[str, Any]:
-        """Remove a file from an existing case."""
         try:
             case = self.get_case(case_id)
             if not case:
@@ -106,7 +103,6 @@ class CosmosDB:
             raise ValueError(f"Error removing file from case: {str(e)}")
 
     def update_graph(self, case_id: str, graph: Dict[str, Any]) -> Dict[str, Any]:
-        """Update the knowledge graph for a case."""
         try:
             case = self.get_case(case_id)
             if not case:
@@ -119,8 +115,38 @@ class CosmosDB:
             raise ValueError(f"Error updating graph for case: {str(e)}")
 
     def get_graph(self, case_id: str) -> Optional[Dict[str, Any]]:
-        """Retrieve the knowledge graph for a case."""
         case = self.get_case(case_id)
         if case:
             return case.get('graph')
+        return None
+
+    def add_summary_and_transcript(self, case_id: str, filename: str, summary: str, full_transcript: str):
+        try:
+            case = self.get_case(case_id)
+            if not case:
+                raise ValueError(f"Case with ID {case_id} not found.")
+            
+            if 'summaries' not in case:
+                case['summaries'] = {}
+            case['summaries'][filename] = summary
+
+            if 'full_transcripts' not in case:
+                case['full_transcripts'] = {}
+            case['full_transcripts'][filename] = full_transcript
+
+            updated_case = self.container.replace_item(item=case_id, body=case)
+            return updated_case
+        except CosmosHttpResponseError as e:
+            raise ValueError(f"Error adding summary and transcript to case: {str(e)}")
+
+    def get_summary(self, case_id: str, filename: str) -> Optional[str]:
+        case = self.get_case(case_id)
+        if case and 'summaries' in case:
+            return case['summaries'].get(filename)
+        return None
+
+    def get_full_transcript(self, case_id: str, filename: str) -> Optional[str]:
+        case = self.get_case(case_id)
+        if case and 'full_transcripts' in case:
+            return case['full_transcripts'].get(filename)
         return None

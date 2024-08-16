@@ -53,13 +53,12 @@ class GraphGenerator:
         Provide your response in JSON format with 'nodes', 'relationships', and 'timecodes' keys.
 
         Follow these guidelines:
-        1. Use these node types: 'Person', 'Location', 'Event', 'Evidence', 'Statement'.
+        1. Use these node types: 'Person', 'Location', 'Event'
         2. Use human-readable identifiers for node IDs, not integers.
         3. Ensure relationship types are general and timeless.
         4. Maintain entity consistency across references.
         5. Only include information explicitly mentioned in the text.
-        6. For 'Statement' nodes, include properties for 'type' (e.g., 'confession', 'denial', 'observation') and 'content'.
-        7. Include timecodes for each node, representing when the entity or statement is first mentioned.
+        6. Include timecodes for each node, representing when the entity or statement is first mentioned.
 
         Your response should be in this format:
         {{
@@ -67,18 +66,15 @@ class GraphGenerator:
                 {{"id": "John_Doe", "type": "Person", "properties": {{"role": "Suspect"}}}},
                 {{"id": "Downtown_Park", "type": "Location", "properties": {{"description": "Place of the incident"}}}},
                 {{"id": "Robbery_Incident", "type": "Event", "properties": {{"description": "Armed robbery at Downtown Park"}}}},
-                {{"id": "Johns_Statement", "type": "Statement", "properties": {{"type": "Denial", "content": "I was not at the park during the robbery."}}}}
             ],
             "relationships": [
                 {{"source": "John_Doe", "target": "Robbery_Incident", "type": "INVOLVED_IN"}},
                 {{"source": "Downtown_Park", "target": "Robbery_Incident", "type": "LOCATION_OF"}},
-                {{"source": "Johns_Statement", "target": "John_Doe", "type": "MADE_BY"}}
             ],
             "timecodes": {{
                 "John_Doe": ["00:02:15"],
                 "Downtown_Park": ["00:01:05"],
                 "Robbery_Incident": ["00:01:05"],
-                "Johns_Statement": ["00:02:50"]
             }}
         }}
         """

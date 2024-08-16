@@ -115,6 +115,24 @@ const StatusMessage = styled.div`
   justify-content: space-between;
 `;
 
+const SummaryContainer = styled.div`
+  margin-top: 20px;
+  padding: 20px;
+  background-color: #f9f9f9;
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+`;
+
+const SummaryTitle = styled.h3`
+  color: #333333;
+  margin-bottom: 10px;
+`;
+
+const SummaryText = styled.p`
+  color: #666666;
+  line-height: 1.6;
+`;
+
 const CaseDetail = () => {
   const { id } = useParams();
   const [caseData, setCaseData] = useState(null);
@@ -207,6 +225,18 @@ const CaseDetail = () => {
         <Tab active={activeTab === 'chat'} onClick={() => setActiveTab('chat')}>
           <TabIcon icon={faComments} /> Chat
         </Tab>
+        <Tab class="disabled" active={activeTab === 'export'} onClick={() => setActiveTab('export')}>
+          <TabIcon icon={faFileAudio} />
+          Export (Coming)
+        </Tab>
+        <Tab class="disabled" active={activeTab === 'export'} onClick={() => setActiveTab('export')}>
+          <TabIcon icon={faFileAudio} />
+          Diarization (Coming)
+        </Tab>
+        <Tab class="disabled" active={activeTab === 'export'} onClick={() => setActiveTab('export')}>
+          <TabIcon icon={faFileAudio} />
+          Background Noise (Coming)
+        </Tab>
       </Tabs>
       {activeTab === 'files' && (
         <>
@@ -222,11 +252,19 @@ const CaseDetail = () => {
                 currentTime={currentTime}
                 setCurrentTime={setCurrentTime}
               />
-              <Transcription 
-                transcript={caseData.transcript} 
-                currentTime={currentTime}
-                onTimeClick={handleTimeClick}
-              />
+              {selectedAudioFile && caseData.summaries && caseData.summaries[selectedAudioFile] && (
+                <SummaryContainer>
+                  <SummaryTitle>Summary for {selectedAudioFile}</SummaryTitle>
+                  <SummaryText>{caseData.summaries[selectedAudioFile]}</SummaryText>
+                </SummaryContainer>
+              )}
+              {selectedAudioFile && caseData.full_transcripts && caseData.full_transcripts[selectedAudioFile] && (
+                <Transcription 
+                  transcript={caseData.full_transcripts[selectedAudioFile]} 
+                  currentTime={currentTime}
+                  onTimeClick={handleTimeClick}
+                />
+              )}
             </>
           )}
         </>
